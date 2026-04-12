@@ -1,6 +1,6 @@
 # Quarteto MVP
 
-MVP enxuto para cadastro de musicas, letras, tom e repertorios de um quarteto, pronto para subir no Vercel e conectar no Supabase sem exigir tela de login.
+MVP enxuto para cadastro de musicas, letras, tom e repertorios de um quarteto, pronto para subir no GitHub, conectar no Supabase e publicar na Vercel sem login no app.
 
 ## O que ja vem pronto
 
@@ -13,6 +13,51 @@ MVP enxuto para cadastro de musicas, letras, tom e repertorios de um quarteto, p
 - Modo demo com dados locais no navegador
 - Integracao preparada para Supabase
 - Workflow de CI no GitHub Actions
+
+## Fluxo mais simples com MCP
+
+### 1. Supabase MCP
+
+Use o MCP oficial da Supabase para criar o projeto e aplicar o schema automaticamente.
+
+Referencia oficial:
+https://supabase.com/mcp
+
+Objetivo:
+- criar o projeto
+- aplicar [`supabase/schema.sql`](./supabase/schema.sql)
+- retornar `NEXT_PUBLIC_SUPABASE_URL`
+- retornar `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+### 2. Vercel MCP
+
+Use o MCP oficial da Vercel para criar o projeto e publicar o repositório do GitHub.
+
+Referencia oficial:
+https://vercel.com/docs/ai-resources/vercel-mcp
+
+Objetivo:
+- importar `ramonfullstack/quarteto-mvp`
+- configurar variaveis de ambiente
+- fazer o primeiro deploy
+
+### 3. Variaveis de ambiente
+
+Depois que o MCP da Supabase devolver os dados, crie `.env.local` com:
+
+```env
+NEXT_PUBLIC_DEMO_MODE=false
+NEXT_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=SUA_CHAVE_ANON
+```
+
+Se quiser testar sem banco primeiro:
+
+```env
+NEXT_PUBLIC_DEMO_MODE=true
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+```
 
 ## Rodar localmente
 
@@ -43,44 +88,9 @@ Remove-Item -LiteralPath .next -Recurse -Force
 npm run dev
 ```
 
-## Variaveis de ambiente
+## Observacao sobre o schema
 
-Copie `.env.example` para `.env.local`.
-
-### Modo demo
-
-```env
-NEXT_PUBLIC_DEMO_MODE=true
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-```
-
-### Modo Supabase
-
-```env
-NEXT_PUBLIC_DEMO_MODE=false
-NEXT_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=SUA_CHAVE_ANON
-```
-
-## Setup do Supabase
-
-1. Crie um projeto no Supabase.
-2. Abra o SQL Editor.
-3. Rode o arquivo [`supabase/schema.sql`](./supabase/schema.sql).
-4. Preencha `.env.local` com a URL e a anon key.
-5. O schema desta versao libera acesso `anon` para simplificar o MVP sem login.
-
-Se depois voce quiser fechar o acesso, a etapa natural e recolocar autenticacao e endurecer as policies de RLS.
-
-## Deploy no Vercel
-
-1. Suba este repositorio para o GitHub.
-2. Importe o repositorio na Vercel.
-3. Configure as variaveis de ambiente do `.env.local`.
-4. Clique em deploy.
-
-No primeiro teste, voce pode publicar em modo demo. Quando quiser dados reais compartilhados entre o grupo, ligue o Supabase.
+O arquivo [`supabase/schema.sql`](./supabase/schema.sql) libera acesso `anon` para simplificar o MVP sem login. Se depois voce quiser fechar o acesso, a proxima etapa natural e recolocar autenticacao e endurecer as policies de RLS.
 
 ## Validacao feita
 
