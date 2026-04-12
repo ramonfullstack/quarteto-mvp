@@ -1,0 +1,37 @@
+name: Supabase Dry Run
+
+on:
+  pull_request:
+    paths:
+      - supabase/migrations/**
+      - supabase/config.toml
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check database configuration
+        id: config
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::notice title=DB dry-run skipped::SUPABASE_DB_URL is not configured"
+            echo "missing=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "missing=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Supabase CLI
+        if: steps.config.outputs.missing == '0'
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Preview migrations
+        if: steps.config.outputs.missing == '0'
+        run: supabase db push --db-url "$SUPABASE_DB_URL" --dry-run --include-all

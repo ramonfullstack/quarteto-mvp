@@ -1,6 +1,6 @@
 # Quarteto MVP
 
-MVP enxuto para cadastro de musicas, letras, tom e repertorios de um quarteto, pronto para subir no GitHub, conectar no Supabase e publicar na Vercel sem login no app.
+MVP enxuto para cadastro de musicas, letras, tom e repertorios de um quarteto, com entrada direta no app e automacao pronta para GitHub Actions, Supabase e Vercel.
 
 ## O que ja vem pronto
 
@@ -12,38 +12,59 @@ MVP enxuto para cadastro de musicas, letras, tom e repertorios de um quarteto, p
 - Layout responsivo para consulta rapida no celular
 - Modo demo com dados locais no navegador
 - Integracao preparada para Supabase
-- Workflow de CI no GitHub Actions
+- Deploy automatico com GitHub Actions + Vercel CLI
+- Banco automatizado com Supabase CLI e migrations versionadas
 
-## Fluxo mais simples com MCP
+## Automacao pronta no GitHub
 
-### 1. Supabase MCP
+Este repositório agora tem quatro workflows:
 
-Use o MCP oficial da Supabase para criar o projeto e aplicar o schema automaticamente.
+- [`ci.yml`](./.github/workflows/ci.yml): roda `npm ci`, `npm run lint` e `npm run build`
+- [`vercel-deploy.yml`](./.github/workflows/vercel-deploy.yml): faz deploy automatico na Vercel
+- [`supabase-db.yml`](./.github/workflows/supabase-db.yml): aplica migrations no banco em push para `main`
+- [`supabase-dry-run.yml`](./.github/workflows/supabase-dry-run.yml): valida migrations em pull request
 
-Referencia oficial:
-https://supabase.com/mcp
+## O que voce precisa configurar uma vez no GitHub
 
-Objetivo:
-- criar o projeto
-- aplicar [`supabase/schema.sql`](./supabase/schema.sql)
-- retornar `NEXT_PUBLIC_SUPABASE_URL`
-- retornar `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+### Repository secrets
 
-### 2. Vercel MCP
+Adicione estes secrets em `Settings > Secrets and variables > Actions`:
 
-Use o MCP oficial da Vercel para criar o projeto e publicar o repositório do GitHub.
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+- `SUPABASE_DB_URL`
 
-Referencia oficial:
-https://vercel.com/docs/ai-resources/vercel-mcp
+### Repository variables
 
-Objetivo:
-- importar `ramonfullstack/quarteto-mvp`
-- configurar variaveis de ambiente
-- fazer o primeiro deploy
+Adicione estas variables em `Settings > Secrets and variables > Actions`:
 
-### 3. Variaveis de ambiente
+- `NEXT_PUBLIC_DEMO_MODE`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-Depois que o MCP da Supabase devolver os dados, crie `.env.local` com:
+## Como isso funciona depois
+
+### Frontend
+
+- qualquer pull request dispara CI
+- qualquer pull request tambem pode gerar preview deploy na Vercel
+- qualquer push em `main` ou `master` dispara deploy de producao
+
+### Banco
+
+- qualquer push em `main` ou `master` com alteracao em `supabase/migrations/**` roda `supabase db push`
+- qualquer pull request com alteracao em `supabase/migrations/**` roda `supabase db push --dry-run`
+
+## Estrutura do banco
+
+O schema original continua em [`supabase/schema.sql`](./supabase/schema.sql), mas a automacao agora usa a migration inicial versionada em [`supabase/migrations/20260411230000_init.sql`](./supabase/migrations/20260411230000_init.sql).
+
+Para novas mudancas de banco, crie novos arquivos SQL em `supabase/migrations/`.
+
+## Variaveis locais
+
+Se o Supabase ja estiver criado, use `.env.local` assim:
 
 ```env
 NEXT_PUBLIC_DEMO_MODE=false
