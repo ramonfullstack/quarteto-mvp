@@ -79,7 +79,20 @@ function sanitizeSearch(value: string) {
   return value.trim().replaceAll(",", " ");
 }
 
+function assertDataModeReady() {
+  if (appConfig.isDemoMode) {
+    return;
+  }
+
+  if (appConfig.hasMissingSupabaseConfig) {
+    throw new Error(
+      "Supabase nao configurado neste ambiente. Crie um .env.local com NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+    );
+  }
+}
+
 export async function listSongs(search = "") {
+  assertDataModeReady();
   if (appConfig.isDemoMode) {
     return demoListSongs(search);
   }
@@ -105,6 +118,7 @@ export async function listSongs(search = "") {
 }
 
 export async function getSong(songId: string) {
+  assertDataModeReady();
   if (appConfig.isDemoMode) {
     return demoGetSong(songId);
   }
@@ -127,6 +141,7 @@ export async function getSong(songId: string) {
 }
 
 export async function createSong(input: SongInput) {
+  assertDataModeReady();
   if (appConfig.isDemoMode) {
     return demoCreateSong(input);
   }
@@ -154,6 +169,7 @@ export async function createSong(input: SongInput) {
 }
 
 export async function updateSong(songId: string, input: SongInput) {
+  assertDataModeReady();
   if (appConfig.isDemoMode) {
     return demoUpdateSong(songId, input);
   }
@@ -183,6 +199,7 @@ export async function updateSong(songId: string, input: SongInput) {
 }
 
 export async function deleteSong(songId: string) {
+  assertDataModeReady();
   if (appConfig.isDemoMode) {
     await demoDeleteSong(songId);
     return;
@@ -197,6 +214,7 @@ export async function deleteSong(songId: string) {
 }
 
 export async function listSetlists(): Promise<SetlistSummary[]> {
+  assertDataModeReady();
   if (appConfig.isDemoMode) {
     return demoListSetlists();
   }
@@ -222,6 +240,7 @@ export async function listSetlists(): Promise<SetlistSummary[]> {
 }
 
 export async function getSetlist(setlistId: string) {
+  assertDataModeReady();
   if (appConfig.isDemoMode) {
     return demoGetSetlist(setlistId);
   }
@@ -246,6 +265,7 @@ export async function getSetlist(setlistId: string) {
 }
 
 export async function createSetlist(input: SetlistInput) {
+  assertDataModeReady();
   if (appConfig.isDemoMode) {
     return demoCreateSetlist(input);
   }
@@ -283,6 +303,7 @@ export async function createSetlist(input: SetlistInput) {
 }
 
 export async function updateSetlist(setlistId: string, input: SetlistInput) {
+  assertDataModeReady();
   if (appConfig.isDemoMode) {
     return demoUpdateSetlist(setlistId, input);
   }
@@ -325,6 +346,7 @@ export async function updateSetlist(setlistId: string, input: SetlistInput) {
 }
 
 export async function deleteSetlist(setlistId: string) {
+  assertDataModeReady();
   if (appConfig.isDemoMode) {
     await demoDeleteSetlist(setlistId);
     return;

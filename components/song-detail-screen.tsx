@@ -36,7 +36,7 @@ export function SongDetailScreen({ songId }: SongDetailScreenProps) {
   }, [songId]);
 
   async function handleDelete() {
-    const confirmed = window.confirm("Remover esta musica? Ela tambem sai dos repertorios onde estiver.");
+    const confirmed = window.confirm("Remover esta musica do acervo?");
     if (!confirmed) {
       return;
     }
@@ -55,7 +55,7 @@ export function SongDetailScreen({ songId }: SongDetailScreenProps) {
   return (
     <AppShell
       title={song?.title ?? "Musica"}
-      description="Visualizacao rapida da letra, tom e marcadores para usar no ensaio."
+      description="Leitura limpa da letra com as informacoes principais visiveis sem poluicao."
       actions={
         <div className="button-row">
           <Link className="button-ghost" href="/songs">
@@ -79,18 +79,17 @@ export function SongDetailScreen({ songId }: SongDetailScreenProps) {
         ) : null}
 
         {song ? (
-          <div className="split-layout">
-            <div className="lyrics-box">{song.lyrics}</div>
-            <aside className="field-grid">
-              <div className="empty-state">
-                <h3>Detalhes</h3>
+          <div className="song-detail-layout">
+            <div className="song-detail-sidebar">
+              <div className="detail-card">
+                <h3>Resumo</h3>
                 <div className="meta-row">
                   {song.musicalKey ? <span className="tag warm">Tom {song.musicalKey}</span> : null}
-                  {song.category ? <span className="tag">{song.category}</span> : null}
+                  {song.category ? <span className="tag strong">{song.category}</span> : null}
                 </div>
-                <div className="meta-row">
+                <div className="meta-row compact">
                   {song.tags.map((tag) => (
-                    <span className="tag" key={tag}>
+                    <span className="tag subtle" key={tag}>
                       #{tag}
                     </span>
                   ))}
@@ -106,7 +105,11 @@ export function SongDetailScreen({ songId }: SongDetailScreenProps) {
                   {deleting ? "Removendo..." : "Excluir"}
                 </button>
               </div>
-            </aside>
+            </div>
+
+            <div className="lyrics-card">
+              <div className="lyrics-box">{song.lyrics}</div>
+            </div>
           </div>
         ) : null}
       </section>

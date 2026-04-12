@@ -1,5 +1,5 @@
-import { SetlistsScreen } from "@/components/setlists-screen";
+import { redirect } from "next/navigation";
 
 export default function SetlistsPage() {
-  return <SetlistsScreen />;
+  redirect("/songs");
 }

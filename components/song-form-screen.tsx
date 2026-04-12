@@ -5,6 +5,7 @@ import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { createSong, getSong, updateSong } from "@/lib/repository";
+import { songCategories } from "@/lib/song-categories";
 
 type SongFormScreenProps = {
   songId?: string;
@@ -87,7 +88,19 @@ export function SongFormScreen({ songId }: SongFormScreenProps) {
   return (
     <AppShell
       title={isEditing ? "Editar musica" : "Nova musica"}
-      description="Preencha letra, tom e marcadores simples para usar nos ensaios."
+      description="Cadastre a letra com calma, escolha uma categoria pronta e deixe o acervo consistente."
+      highlights={[
+        {
+          label: "Categorias prontas",
+          value: String(songCategories.length),
+          detail: "Quarteto, grupo, solo, coral e outras opcoes ja disponiveis.",
+        },
+        {
+          label: "Foco",
+          value: "Musica",
+          detail: "Sem repertorios nem telas paralelas para distrair o cadastro.",
+        },
+      ]}
       actions={
         <Link className="button-ghost" href={isEditing && songId ? `/songs/${songId}` : "/songs"}>
           Voltar
@@ -99,10 +112,16 @@ export function SongFormScreen({ songId }: SongFormScreenProps) {
         {error ? <p className="error-text">{error}</p> : null}
 
         {!loading ? (
-          <form className="field-grid" onSubmit={handleSubmit}>
-            <div className="field">
-              <label htmlFor="title">Titulo</label>
-              <input id="title" onChange={(event) => setTitle(event.target.value)} required value={title} />
+          <form className="song-form-grid" onSubmit={handleSubmit}>
+            <div className="field field-wide">
+              <label htmlFor="title">Titulo da musica</label>
+              <input
+                id="title"
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Ex.: Porque Ele Vive"
+                required
+                value={title}
+              />
             </div>
 
             <div className="field">
@@ -117,25 +136,27 @@ export function SongFormScreen({ songId }: SongFormScreenProps) {
 
             <div className="field">
               <label htmlFor="category">Categoria</label>
-              <input
-                id="category"
-                onChange={(event) => setCategory(event.target.value)}
-                placeholder="Ex.: adoracao, celebracao, comunhao"
-                value={category}
-              />
+              <select id="category" onChange={(event) => setCategory(event.target.value)} value={category}>
+                <option value="">Selecione uma categoria</option>
+                {songCategories.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div className="field">
+            <div className="field field-wide">
               <label htmlFor="tags">Tags</label>
               <input
                 id="tags"
                 onChange={(event) => setTagsText(event.target.value)}
-                placeholder="abertura, calma, final"
+                placeholder="Louvor, pascoa, abertura, natal"
                 value={tagsText}
               />
             </div>
 
-            <div className="field">
+            <div className="field field-wide">
               <label htmlFor="lyrics">Letra</label>
               <textarea
                 id="lyrics"
@@ -146,7 +167,7 @@ export function SongFormScreen({ songId }: SongFormScreenProps) {
               />
             </div>
 
-            <div className="button-row">
+            <div className="button-row field-wide">
               <button className="button" disabled={saving} type="submit">
                 {saving ? "Salvando..." : isEditing ? "Salvar alteracoes" : "Criar musica"}
               </button>

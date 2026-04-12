@@ -16,10 +16,7 @@ type AppShellProps = {
   children: React.ReactNode;
 };
 
-const navigation = [
-  { href: "/songs", label: "Musicas" },
-  { href: "/setlists", label: "Repertorios" },
-];
+const navigation = [{ href: "/songs", label: "Musicas" }];
 
 export function AppShell({ title, description, actions, highlights = [], children }: AppShellProps) {
   const pathname = usePathname();
@@ -31,16 +28,19 @@ export function AppShell({ title, description, actions, highlights = [], childre
           <div className="brand-mark">Q</div>
           <div>
             <strong>Quarteto</strong>
-            <span>Painel leve para ensaio, consulta rapida e repertorios.</span>
+            <span>Biblioteca simples para consultar letras e cadastrar musicas sem friccao.</span>
           </div>
         </div>
         <div className="topbar-actions">
-          <span className="mode-badge">{appConfig.isDemoMode ? "Modo teste local" : "Modo compartilhado Supabase"}</span>
+          <span className="mode-badge">
+            {appConfig.isDemoMode
+              ? "Modo teste local"
+              : appConfig.hasMissingSupabaseConfig
+                ? "Supabase nao configurado"
+                : "Modo compartilhado Supabase"}
+          </span>
           <Link className="button-ghost" href="/songs/new">
             Nova musica
-          </Link>
-          <Link className="button-ghost" href="/setlists/new">
-            Novo repertorio
           </Link>
         </div>
       </header>
@@ -49,7 +49,7 @@ export function AppShell({ title, description, actions, highlights = [], childre
         <section className="hero-panel">
           <div className="hero-orb hero-orb-left" />
           <div className="hero-orb hero-orb-right" />
-          <span className="kicker">Entrada direta, sem login, pronta para abrir no celular</span>
+          <span className="kicker">Entrada direta, sem login, pronta para uso rapido no celular</span>
           <div className="page-title">
             <div>
               <h1>{title}</h1>
@@ -81,6 +81,16 @@ export function AppShell({ title, description, actions, highlights = [], childre
                   <p>{item.detail}</p>
                 </article>
               ))}
+            </div>
+          ) : null}
+
+          {appConfig.hasMissingSupabaseConfig ? (
+            <div className="config-warning">
+              <strong>Falta configurar o Supabase neste ambiente.</strong>
+              <p>
+                Crie um arquivo <code>.env.local</code> com <code>NEXT_PUBLIC_DEMO_MODE=false</code>,
+                <code>NEXT_PUBLIC_SUPABASE_URL</code> e <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>.
+              </p>
             </div>
           ) : null}
         </section>

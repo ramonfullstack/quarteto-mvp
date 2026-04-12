@@ -72,13 +72,15 @@ NEXT_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=SUA_CHAVE_ANON
 ```
 
-Se quiser testar sem banco primeiro:
+Se quiser testar sem banco primeiro, ative o demo de forma explicita:
 
 ```env
 NEXT_PUBLIC_DEMO_MODE=true
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
+
+Sem `.env.local`, o app agora nao entra mais em modo demo silenciosamente. Ele vai sinalizar que o Supabase ainda nao foi configurado.
 
 ## Rodar localmente
 
