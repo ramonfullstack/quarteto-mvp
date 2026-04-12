@@ -100,7 +100,7 @@ Com `NEXT_PUBLIC_DEMO_MODE=true`, o app abre direto e os dados ficam no `localSt
 
 ## Se o `next dev` quebrar com erro de manifest ou chunk faltando
 
-Esta versao ja usa `next dev --webpack`, porque o Turbopack pode falhar em alguns ambientes com erros como `React Client Manifest` ou `Cannot find module './778.js'`.
+Nesta versao do Next, o script local usa `next dev`. O modo com Turbopack so entra quando voce usa `--turbo` ou `--turbopack`, e esses erros costumam aparecer justamente nesse caminho.
 
 Se o erro ja tiver ficado preso no cache, pare o servidor, apague a pasta `.next` e rode de novo:
 
