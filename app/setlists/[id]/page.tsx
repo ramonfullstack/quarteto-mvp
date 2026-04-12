@@ -8,3 +8,4 @@ export default async function SetlistDetailPage({
   await params;
   redirect("/songs");
 }
+ 
