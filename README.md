@@ -7,6 +7,7 @@ MVP enxuto para cadastro de musicas, letras, tom e repertorios de um quarteto, c
 - Entrada direta no app, sem autenticacao
 - Lista de musicas com busca por titulo, letra, categoria e tags
 - Cadastro, edicao e exclusao de musicas
+- Upload opcional de ate 6 MP3s por musica, com slots independentes e status `none`, `pending`, `uploaded` e `failed`
 - Lista de repertorios
 - Criacao, edicao e exclusao de repertorios com ordenacao de musicas
 - Layout responsivo para consulta rapida no celular
@@ -86,6 +87,10 @@ Se o Supabase ja estiver criado, use `.env.local` assim:
 NEXT_PUBLIC_DEMO_MODE=false
 NEXT_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=SUA_CHAVE_ANON
+R2_ACCESS_KEY_ID=SEU_ACCESS_KEY_ID
+R2_SECRET_ACCESS_KEY=SEU_SECRET_ACCESS_KEY
+R2_BUCKET_NAME=quarteto-audios
+R2_ENDPOINT=https://SEU_ACCOUNT_ID.r2.cloudflarestorage.com
 ```
 
 Se quiser testar sem banco primeiro, ative o demo de forma explicita:
@@ -97,6 +102,14 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
 Sem `.env.local`, o app agora nao entra mais em modo demo silenciosamente. Ele vai sinalizar que o Supabase ainda nao foi configurado.
+
+## Fluxo do audio
+
+- a musica e salva primeiro no Supabase
+- os MP3s sao tratados como anexos opcionais em ate 6 slots por musica
+- se o upload no R2 falhar, a musica continua salva normalmente
+- o banco registra o estado de cada arquivo em `song_audio_files.audio_status`
+- o reenvio sobrescreve sempre a mesma chave por slot: `songs/{songId}/audio-{slot}.mp3`
 
 ## Rodar localmente
 

@@ -1,12 +1,25 @@
 "use client";
 
 import { sampleSetlists, sampleSongs } from "@/lib/sample-data";
-import type { AppSession, Setlist, SetlistInput, Song, SongInput } from "@/lib/types";
+import type { AppSession, Setlist, SetlistInput, Song, SongAudioFile, SongAudioFileUpdate, SongInput } from "@/lib/types";
 import { slugIncludes } from "@/lib/format";
+import { getSongAudioSlotLabel } from "@/lib/song-audio";
 
 const SONGS_KEY = "quarteto.demo.songs";
 const SETLISTS_KEY = "quarteto.demo.setlists";
 const SESSION_KEY = "quarteto.demo.session";
+
+type LegacySong = Omit<Song, "audioFiles"> & {
+  audioFiles?: SongAudioFile[];
+  audioKey?: string | null;
+  audioUrl?: string | null;
+  audioFileName?: string | null;
+  audioContentType?: string | null;
+  audioSizeBytes?: number | null;
+  audioStatus?: SongAudioFile["audioStatus"];
+  audioError?: string | null;
+  audioUploadedAt?: string | null;
+};
 
 function ensureSeeded() {
   if (typeof window === "undefined") {
@@ -45,6 +58,61 @@ function makeId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
 }
 
+function normalizeSongAudioFile(audioFile: SongAudioFile, songId: string): SongAudioFile {
+  return {
+    ...audioFile,
+    songId,
+    label: audioFile.label?.trim() || getSongAudioSlotLabel(audioFile.slotIndex),
+    createdAt: audioFile.createdAt || new Date().toISOString(),
+    updatedAt: audioFile.updatedAt || new Date().toISOString(),
+  };
+}
+
+function buildLegacySongAudioFile(song: LegacySong): SongAudioFile[] {
+  if (!song.audioKey && !song.audioFileName && song.audioStatus !== "failed" && song.audioStatus !== "pending") {
+    return [];
+  }
+
+  return [
+    {
+      id: `legacy-audio-${song.id}-1`,
+      songId: song.id,
+      slotIndex: 1,
+      label: "Audio principal",
+      audioKey: song.audioKey ?? null,
+      audioUrl: song.audioUrl ?? null,
+      audioFileName: song.audioFileName ?? null,
+      audioContentType: song.audioContentType ?? null,
+      audioSizeBytes: song.audioSizeBytes ?? null,
+      audioStatus: song.audioStatus ?? "none",
+      audioError: song.audioError ?? null,
+      audioUploadedAt: song.audioUploadedAt ?? null,
+      createdAt: song.createdAt,
+      updatedAt: song.updatedAt,
+    },
+  ];
+}
+
+function normalizeSong(song: LegacySong): Song {
+  const audioFiles = Array.isArray(song.audioFiles) && song.audioFiles.length > 0 ? song.audioFiles : buildLegacySongAudioFile(song);
+
+  return {
+    id: song.id,
+    title: song.title,
+    lyrics: song.lyrics,
+    musicalKey: song.musicalKey,
+    category: song.category,
+    tags: song.tags,
+    audioFiles: audioFiles.map((audioFile) => normalizeSongAudioFile(audioFile, song.id)).sort((left, right) => left.slotIndex - right.slotIndex),
+    createdAt: song.createdAt,
+    updatedAt: song.updatedAt,
+  };
+}
+
+function readSongsStore() {
+  return readStore<LegacySong>(SONGS_KEY).map(normalizeSong);
+}
+
 export async function demoSignIn(email: string) {
   ensureSeeded();
   const session: AppSession = { email, source: "demo" };
@@ -63,7 +131,7 @@ export async function demoGetSession() {
 }
 
 export async function demoListSongs(search = "") {
-  const songs = readStore<Song>(SONGS_KEY).sort((left, right) => left.title.localeCompare(right.title));
+  const songs = readSongsStore().sort((left, right) => left.title.localeCompare(right.title));
   const query = search.trim();
 
   if (!query) {
@@ -76,11 +144,11 @@ export async function demoListSongs(search = "") {
 }
 
 export async function demoGetSong(songId: string) {
-  return readStore<Song>(SONGS_KEY).find((song) => song.id === songId) ?? null;
+  return readSongsStore().find((song) => song.id === songId) ?? null;
 }
 
 export async function demoCreateSong(input: SongInput) {
-  const songs = readStore<Song>(SONGS_KEY);
+  const songs = readSongsStore();
   const now = new Date().toISOString();
 
   const newSong: Song = {
@@ -90,6 +158,7 @@ export async function demoCreateSong(input: SongInput) {
     musicalKey: input.musicalKey.trim(),
     category: input.category.trim(),
     tags: input.tags,
+    audioFiles: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -100,7 +169,7 @@ export async function demoCreateSong(input: SongInput) {
 }
 
 export async function demoUpdateSong(songId: string, input: SongInput) {
-  const songs = readStore<Song>(SONGS_KEY);
+  const songs = readSongsStore();
   const nextSongs = songs.map((song) =>
     song.id === songId
       ? {
@@ -111,6 +180,38 @@ export async function demoUpdateSong(songId: string, input: SongInput) {
           category: input.category.trim(),
           tags: input.tags,
           updatedAt: new Date().toISOString(),
+        }
+      : song,
+  );
+
+  writeStore(SONGS_KEY, nextSongs);
+  return nextSongs.find((song) => song.id === songId) ?? null;
+}
+
+export async function demoUpsertSongAudioFile(songId: string, input: SongAudioFileUpdate) {
+  const songs = readSongsStore();
+  const now = new Date().toISOString();
+  const nextSongs = songs.map((song) =>
+    song.id === songId
+      ? {
+          ...song,
+          audioFiles: [...song.audioFiles.filter((audioFile) => audioFile.slotIndex !== input.slotIndex), {
+            id: song.audioFiles.find((audioFile) => audioFile.slotIndex === input.slotIndex)?.id ?? makeId("song-audio"),
+            songId,
+            slotIndex: input.slotIndex,
+            label: input.label.trim() || getSongAudioSlotLabel(input.slotIndex),
+            audioKey: input.audioKey ?? null,
+            audioUrl: input.audioUrl ?? null,
+            audioFileName: input.audioFileName ?? null,
+            audioContentType: input.audioContentType ?? null,
+            audioSizeBytes: input.audioSizeBytes ?? null,
+            audioStatus: input.audioStatus,
+            audioError: input.audioError ?? null,
+            audioUploadedAt: input.audioUploadedAt ?? null,
+            createdAt: song.audioFiles.find((audioFile) => audioFile.slotIndex === input.slotIndex)?.createdAt ?? now,
+            updatedAt: now,
+          }].sort((left, right) => left.slotIndex - right.slotIndex),
+          updatedAt: now,
         }
       : song,
   );

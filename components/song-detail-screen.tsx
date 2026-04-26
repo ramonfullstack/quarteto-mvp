@@ -4,9 +4,10 @@ import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
-import { formatRelativeStamp } from "@/lib/format";
+import { formatFileSize, formatRelativeStamp } from "@/lib/format";
 import { deleteSong, getSong } from "@/lib/repository";
-import type { Song } from "@/lib/types";
+import { getSongAudioSlotLabel } from "@/lib/song-audio";
+import type { Song, SongAudioFile } from "@/lib/types";
 
 type SongDetailScreenProps = {
   songId: string;
@@ -18,6 +19,26 @@ export function SongDetailScreen({ songId }: SongDetailScreenProps) {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
+
+  function getAudioActionLabel(currentSong: Song) {
+    return currentSong.audioFiles.length > 0 ? "Gerenciar audios" : "Adicionar audios";
+  }
+
+  function getAudioStatusLabel(audioFile: SongAudioFile) {
+    if (audioFile.audioStatus === "pending") {
+      return "Upload pendente";
+    }
+
+    if (audioFile.audioStatus === "uploaded") {
+      return "Audio disponivel";
+    }
+
+    if (audioFile.audioStatus === "failed") {
+      return "Falha no audio";
+    }
+
+    return "Sem audio";
+  }
 
   useEffect(() => {
     async function loadSong() {
@@ -95,6 +116,42 @@ export function SongDetailScreen({ songId }: SongDetailScreenProps) {
                   ))}
                 </div>
                 <p>Atualizada em {formatRelativeStamp(song.updatedAt)}</p>
+              </div>
+
+              <div className="detail-card">
+                <h3>Audios</h3>
+                <p>{song.audioFiles.length} de 6 slots preenchidos.</p>
+                {song.audioFiles.length === 0 ? (
+                  <p>O MP3 continua opcional. Quando houver upload valido, os players aparecem aqui por slot.</p>
+                ) : (
+                  <div className="song-audio-list">
+                    {song.audioFiles.map((audioFile) => (
+                      <div className="song-audio-item" key={audioFile.id}>
+                        <div className="meta-row compact">
+                          <span className="tag subtle">Slot {audioFile.slotIndex}</span>
+                          <span className="tag warm">{audioFile.label || getSongAudioSlotLabel(audioFile.slotIndex)}</span>
+                          <span
+                            className={`tag ${audioFile.audioStatus === "uploaded" ? "strong" : audioFile.audioStatus === "failed" ? "warm" : "subtle"}`}
+                          >
+                            {getAudioStatusLabel(audioFile)}
+                          </span>
+                        </div>
+                        {audioFile.audioFileName ? <p>{audioFile.audioFileName}</p> : null}
+                        {audioFile.audioStatus === "uploaded" && audioFile.audioUrl ? (
+                          <audio className="audio-player" controls preload="metadata" src={audioFile.audioUrl} />
+                        ) : null}
+                        {audioFile.audioSizeBytes ? <p>Tamanho: {formatFileSize(audioFile.audioSizeBytes)}</p> : null}
+                        {audioFile.audioUploadedAt ? <p>Enviado em {formatRelativeStamp(audioFile.audioUploadedAt)}</p> : null}
+                        {audioFile.audioError ? <p className="error-text">{audioFile.audioError}</p> : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="button-row">
+                  <Link className="button-ghost" href={`/songs/${songId}/edit`}>
+                    {getAudioActionLabel(song)}
+                  </Link>
+                </div>
               </div>
 
               <div className="button-row">

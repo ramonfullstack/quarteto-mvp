@@ -10,11 +10,12 @@ import {
   demoGetSong,
   demoListSetlists,
   demoListSongs,
+  demoUpsertSongAudioFile,
   demoUpdateSetlist,
   demoUpdateSong,
 } from "@/lib/demo-store";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
-import type { Setlist, SetlistInput, SetlistSummary, Song, SongInput } from "@/lib/types";
+import type { Setlist, SetlistInput, SetlistSummary, Song, SongAudioFile, SongAudioFileUpdate, SongInput } from "@/lib/types";
 
 type SongRow = {
   id: string;
@@ -23,6 +24,24 @@ type SongRow = {
   musical_key: string;
   category: string | null;
   tags: string[] | null;
+  created_at: string;
+  updated_at: string;
+  song_audio_files?: SongAudioFileRow[] | null;
+};
+
+type SongAudioFileRow = {
+  id: string;
+  song_id: string;
+  slot_index: number;
+  label: string;
+  audio_key: string | null;
+  audio_url: string | null;
+  audio_file_name: string | null;
+  audio_content_type: string | null;
+  audio_size_bytes: number | null;
+  audio_status: SongAudioFile["audioStatus"];
+  audio_error: string | null;
+  audio_uploaded_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -43,6 +62,30 @@ type SetlistSongRow = {
   song?: SongRow | SongRow[] | null;
 };
 
+const baseSongSelectFields = "id, title, lyrics, musical_key, category, tags, created_at, updated_at";
+const songAudioFileSelectFields =
+  "id, song_id, slot_index, label, audio_key, audio_url, audio_file_name, audio_content_type, audio_size_bytes, audio_status, audio_error, audio_uploaded_at, created_at, updated_at";
+const songSelectFields = `${baseSongSelectFields}, song_audio_files(${songAudioFileSelectFields})`;
+
+function mapSongAudioFile(row: SongAudioFileRow): SongAudioFile {
+  return {
+    id: row.id,
+    songId: row.song_id,
+    slotIndex: row.slot_index,
+    label: row.label,
+    audioKey: row.audio_key,
+    audioUrl: row.audio_url,
+    audioFileName: row.audio_file_name,
+    audioContentType: row.audio_content_type,
+    audioSizeBytes: row.audio_size_bytes,
+    audioStatus: row.audio_status,
+    audioError: row.audio_error,
+    audioUploadedAt: row.audio_uploaded_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 function mapSong(row: SongRow): Song {
   return {
     id: row.id,
@@ -51,6 +94,7 @@ function mapSong(row: SongRow): Song {
     musicalKey: row.musical_key,
     category: row.category ?? "",
     tags: row.tags ?? [],
+    audioFiles: (row.song_audio_files ?? []).map(mapSongAudioFile).sort((left, right) => left.slotIndex - right.slotIndex),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -100,7 +144,7 @@ export async function listSongs(search = "") {
   const supabase = getSupabaseBrowserClient();
   let query = supabase
     .from("songs")
-    .select("id, title, lyrics, musical_key, category, tags, created_at, updated_at")
+    .select(songSelectFields)
     .order("title");
 
   const safeSearch = sanitizeSearch(search);
@@ -126,7 +170,7 @@ export async function getSong(songId: string) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from("songs")
-    .select("id, title, lyrics, musical_key, category, tags, created_at, updated_at")
+    .select(songSelectFields)
     .eq("id", songId)
     .single();
 
@@ -158,14 +202,14 @@ export async function createSong(input: SongInput) {
   const { data, error } = await supabase
     .from("songs")
     .insert(payload)
-    .select("id, title, lyrics, musical_key, category, tags, created_at, updated_at")
+    .select("id")
     .single();
 
   if (error) {
     throw error;
   }
 
-  return mapSong(data);
+  return getSong(data.id);
 }
 
 export async function updateSong(songId: string, input: SongInput) {
@@ -188,14 +232,47 @@ export async function updateSong(songId: string, input: SongInput) {
     .from("songs")
     .update(payload)
     .eq("id", songId)
-    .select("id, title, lyrics, musical_key, category, tags, created_at, updated_at")
+    .select("id")
     .single();
 
   if (error) {
     throw error;
   }
 
-  return mapSong(data);
+  return getSong(data.id);
+}
+
+export async function upsertSongAudioFile(songId: string, input: SongAudioFileUpdate) {
+  assertDataModeReady();
+  if (appConfig.isDemoMode) {
+    return demoUpsertSongAudioFile(songId, input);
+  }
+
+  const supabase = getSupabaseBrowserClient();
+  const payload = {
+    song_id: songId,
+    slot_index: input.slotIndex,
+    label: input.label.trim(),
+    audio_key: input.audioKey,
+    audio_url: input.audioUrl,
+    audio_file_name: input.audioFileName,
+    audio_content_type: input.audioContentType,
+    audio_size_bytes: input.audioSizeBytes,
+    audio_status: input.audioStatus,
+    audio_error: input.audioError,
+    audio_uploaded_at: input.audioUploadedAt,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabase.from("song_audio_files").upsert(payload, {
+    onConflict: "song_id,slot_index",
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return getSong(songId);
 }
 
 export async function deleteSong(songId: string) {
@@ -249,7 +326,7 @@ export async function getSetlist(setlistId: string) {
   const { data, error } = await supabase
     .from("setlists")
     .select(
-      "id, name, event_date, notes, created_at, setlist_songs(id, setlist_id, song_id, position, song:songs(id, title, lyrics, musical_key, category, tags, created_at, updated_at))",
+      `id, name, event_date, notes, created_at, setlist_songs(id, setlist_id, song_id, position, song:songs(${baseSongSelectFields}))`,
     )
     .eq("id", setlistId)
     .single();

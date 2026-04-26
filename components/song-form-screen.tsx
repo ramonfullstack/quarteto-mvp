@@ -4,24 +4,80 @@ import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
-import { createSong, getSong, updateSong } from "@/lib/repository";
+import { createSong, getSong, updateSong, upsertSongAudioFile } from "@/lib/repository";
+import {
+  buildSongAudioMetadataUpdate,
+  buildFailedSongAudioUpdate,
+  buildPendingSongAudioUpdate,
+  getSongAudioSlotLabel,
+  normalizeSongAudioLabel,
+  songAudioSlotPresets,
+  uploadSongAudioFile,
+  validateSongAudioFile,
+} from "@/lib/song-audio";
 import { songCategories } from "@/lib/song-categories";
+import type { Song, SongAudioFile } from "@/lib/types";
 
 type SongFormScreenProps = {
   songId?: string;
 };
 
+type AudioSlotState = {
+  slotIndex: number;
+  label: string;
+  file: File | null;
+  existingAudio: SongAudioFile | null;
+};
+
+function buildAudioSlots(song?: Song | null): AudioSlotState[] {
+  return songAudioSlotPresets.map((slot) => {
+    const existingAudio = song?.audioFiles.find((audioFile) => audioFile.slotIndex === slot.slotIndex) ?? null;
+
+    return {
+      slotIndex: slot.slotIndex,
+      label: existingAudio?.label ?? slot.label,
+      file: null,
+      existingAudio,
+    };
+  });
+}
+
 export function SongFormScreen({ songId }: SongFormScreenProps) {
   const router = useRouter();
   const isEditing = Boolean(songId);
+  const [, setCurrentSong] = useState<Song | null>(null);
   const [title, setTitle] = useState("");
   const [lyrics, setLyrics] = useState("");
   const [musicalKey, setMusicalKey] = useState("");
   const [category, setCategory] = useState("");
   const [tagsText, setTagsText] = useState("");
+  const [audioSlots, setAudioSlots] = useState<AudioSlotState[]>(() => buildAudioSlots());
   const [loading, setLoading] = useState(isEditing);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  function updateAudioSlot(slotIndex: number, updater: (slot: AudioSlotState) => AudioSlotState) {
+    setAudioSlots((currentSlots) =>
+      currentSlots.map((slot) => (slot.slotIndex === slotIndex ? updater(slot) : slot)),
+    );
+  }
+
+  async function persistAudioState(songToUpdateId: string, slotIndex: number, nextState: ReturnType<typeof buildPendingSongAudioUpdate>) {
+    try {
+      const updatedSong = await upsertSongAudioFile(songToUpdateId, nextState);
+
+      if (!updatedSong) {
+        return null;
+      }
+
+      setCurrentSong(updatedSong);
+      setAudioSlots(buildAudioSlots(updatedSong));
+      return updatedSong;
+    } catch {
+      updateAudioSlot(slotIndex, (slot) => slot);
+      return null;
+    }
+  }
 
   useEffect(() => {
     if (!songId) {
@@ -39,6 +95,8 @@ export function SongFormScreen({ songId }: SongFormScreenProps) {
           return;
         }
 
+        setCurrentSong(song);
+        setAudioSlots(buildAudioSlots(song));
         setTitle(song.title);
         setLyrics(song.lyrics);
         setMusicalKey(song.musicalKey);
@@ -75,6 +133,80 @@ export function SongFormScreen({ songId }: SongFormScreenProps) {
 
       if (!song) {
         throw new Error("Nao foi possivel salvar a musica.");
+      }
+
+      let latestSong = song;
+      setCurrentSong(song);
+
+      for (const slot of audioSlots) {
+        const label = normalizeSongAudioLabel(slot.slotIndex, slot.label);
+        const existingAudio = latestSong.audioFiles.find((audioFile) => audioFile.slotIndex === slot.slotIndex) ?? slot.existingAudio;
+
+        if (!slot.file) {
+          if (existingAudio && existingAudio.label !== label) {
+            const updatedSong = await persistAudioState(
+              song.id,
+              slot.slotIndex,
+              buildSongAudioMetadataUpdate(existingAudio, label),
+            );
+
+            if (updatedSong) {
+              latestSong = updatedSong;
+            }
+          }
+
+          continue;
+        }
+
+        const validationError = validateSongAudioFile(slot.file);
+
+        if (validationError) {
+          const updatedSong = await persistAudioState(
+            song.id,
+            slot.slotIndex,
+            buildFailedSongAudioUpdate(song.id, slot.slotIndex, label, slot.file, validationError, existingAudio),
+          );
+
+          if (updatedSong) {
+            latestSong = updatedSong;
+          }
+
+          continue;
+        }
+
+        const pendingSong = await persistAudioState(
+          song.id,
+          slot.slotIndex,
+          buildPendingSongAudioUpdate(song.id, slot.slotIndex, label, slot.file),
+        );
+
+        if (pendingSong) {
+          latestSong = pendingSong;
+        }
+
+        try {
+          const uploadedAudio = await uploadSongAudioFile(song.id, slot.slotIndex, label, slot.file);
+          const updatedSong = await persistAudioState(song.id, slot.slotIndex, uploadedAudio);
+
+          if (updatedSong) {
+            latestSong = updatedSong;
+          }
+        } catch (uploadError) {
+          const uploadMessage =
+            uploadError instanceof Error
+              ? uploadError.message
+              : "Falha ao enviar o audio. A musica foi salva sem atualizar este MP3.";
+
+          const updatedSong = await persistAudioState(
+            song.id,
+            slot.slotIndex,
+            buildFailedSongAudioUpdate(song.id, slot.slotIndex, label, slot.file, uploadMessage, existingAudio),
+          );
+
+          if (updatedSong) {
+            latestSong = updatedSong;
+          }
+        }
       }
 
       startTransition(() => router.replace(`/songs/${song.id}`));
@@ -154,6 +286,62 @@ export function SongFormScreen({ songId }: SongFormScreenProps) {
                 placeholder="Louvor, pascoa, abertura, natal"
                 value={tagsText}
               />
+            </div>
+
+            <div className="field field-wide">
+              <label>Arquivos de audio</label>
+              <p className="status">
+                Cada musica pode ter ate 6 arquivos. O cadastro da musica continua mesmo se algum upload falhar.
+              </p>
+              <p className="status">Formato aceito: MP3. Tamanho maximo: 20 MB por arquivo.</p>
+              <div className="audio-slot-grid">
+                {audioSlots.map((slot) => (
+                  <div className="audio-slot-card" key={slot.slotIndex}>
+                    <div className="meta-row compact">
+                      <span className="tag subtle">Slot {slot.slotIndex}</span>
+                      <span className="tag warm">{getSongAudioSlotLabel(slot.slotIndex)}</span>
+                    </div>
+                    <div className="field">
+                      <label htmlFor={`audio-label-${slot.slotIndex}`}>Rotulo</label>
+                      <input
+                        disabled={saving}
+                        id={`audio-label-${slot.slotIndex}`}
+                        onChange={(event) =>
+                          updateAudioSlot(slot.slotIndex, (currentSlot) => ({
+                            ...currentSlot,
+                            label: event.target.value,
+                          }))
+                        }
+                        placeholder={getSongAudioSlotLabel(slot.slotIndex)}
+                        value={slot.label}
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor={`audio-file-${slot.slotIndex}`}>Arquivo MP3</label>
+                      <input
+                        accept=".mp3,audio/mpeg"
+                        disabled={saving}
+                        id={`audio-file-${slot.slotIndex}`}
+                        onChange={(event) =>
+                          updateAudioSlot(slot.slotIndex, (currentSlot) => ({
+                            ...currentSlot,
+                            file: event.target.files?.[0] ?? null,
+                          }))
+                        }
+                        type="file"
+                      />
+                    </div>
+                    <p className="status">
+                      {slot.file
+                        ? `Selecionado: ${slot.file.name}`
+                        : slot.existingAudio?.audioFileName
+                          ? `Atual: ${slot.existingAudio.audioFileName}`
+                          : "Nenhum arquivo neste slot."}
+                    </p>
+                    {slot.existingAudio?.audioError ? <p className="error-text">{slot.existingAudio.audioError}</p> : null}
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="field field-wide">

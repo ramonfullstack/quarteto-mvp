@@ -325,6 +325,27 @@ code {
   gap: 16px;
 }
 
+.audio-slot-grid,
+.song-audio-list {
+  display: grid;
+  gap: 12px;
+}
+
+.audio-slot-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.audio-slot-card,
+.song-audio-item {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(32, 26, 23, 0.08);
+}
+
 .field-wide {
   grid-column: 1 / -1;
 }
@@ -480,6 +501,10 @@ code {
   font-size: 1.02rem;
 }
 
+.audio-player {
+  width: 100%;
+}
+
 .error-text {
   color: var(--danger);
 }
@@ -490,6 +515,7 @@ code {
   }
 
   .hero-stats,
+  .audio-slot-grid,
   .song-form-grid,
   .song-detail-layout {
     grid-template-columns: 1fr;
