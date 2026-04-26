@@ -29,6 +29,39 @@ type AudioSlotState = {
   existingAudio: SongAudioFile | null;
 };
 
+const defaultSongTag = "quarteto";
+
+const musicalKeyOptions = [
+  "A",
+  "Am",
+  "Bb",
+  "Bbm",
+  "B",
+  "Bm",
+  "C",
+  "Cm",
+  "C#",
+  "C#m",
+  "Db",
+  "Dbm",
+  "D",
+  "Dm",
+  "Eb",
+  "Ebm",
+  "E",
+  "Em",
+  "F",
+  "Fm",
+  "F#",
+  "F#m",
+  "Gb",
+  "Gbm",
+  "G",
+  "Gm",
+  "Ab",
+  "Abm",
+];
+
 function buildAudioSlots(song?: Song | null): AudioSlotState[] {
   return songAudioSlotPresets.map((slot) => {
     const existingAudio = song?.audioFiles.find((audioFile) => audioFile.slotIndex === slot.slotIndex) ?? null;
@@ -48,9 +81,9 @@ export function SongFormScreen({ songId }: SongFormScreenProps) {
   const [, setCurrentSong] = useState<Song | null>(null);
   const [title, setTitle] = useState("");
   const [lyrics, setLyrics] = useState("");
-  const [musicalKey, setMusicalKey] = useState("");
-  const [category, setCategory] = useState("");
-  const [tagsText, setTagsText] = useState("");
+  const [musicalKey, setMusicalKey] = useState("G");
+  const [category, setCategory] = useState("Quarteto");
+  const [tagsText, setTagsText] = useState(defaultSongTag);
   const [audioSlots, setAudioSlots] = useState<AudioSlotState[]>(() => buildAudioSlots());
   const [loading, setLoading] = useState(isEditing);
   const [saving, setSaving] = useState(false);
@@ -258,12 +291,14 @@ export function SongFormScreen({ songId }: SongFormScreenProps) {
 
             <div className="field">
               <label htmlFor="musicalKey">Tom</label>
-              <input
-                id="musicalKey"
-                onChange={(event) => setMusicalKey(event.target.value)}
-                placeholder="Ex.: G, Dm, Bb"
-                value={musicalKey}
-              />
+              <select id="musicalKey" onChange={(event) => setMusicalKey(event.target.value)} value={musicalKey}>
+                <option value="">Selecione um tom</option>
+                {musicalKeyOptions.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="field">
