@@ -62,10 +62,59 @@ type SetlistSongRow = {
   song?: SongRow | SongRow[] | null;
 };
 
+type PostgrestErrorLike = {
+  code?: string;
+  message?: string;
+};
+
 const baseSongSelectFields = "id, title, lyrics, musical_key, category, tags, created_at, updated_at";
 const songAudioFileSelectFields =
   "id, song_id, slot_index, label, audio_key, audio_url, audio_file_name, audio_content_type, audio_size_bytes, audio_status, audio_error, audio_uploaded_at, created_at, updated_at";
 const songSelectFields = `${baseSongSelectFields}, song_audio_files(${songAudioFileSelectFields})`;
+
+function isMissingSongAudioRelationError(error: PostgrestErrorLike | null) {
+  return error?.code === "PGRST200" && error.message?.includes("song_audio_files") === true;
+}
+
+async function loadSongAudioFilesBySongId(supabase: ReturnType<typeof getSupabaseBrowserClient>, songIds: string[]) {
+  const audioFilesBySongId = new Map<string, SongAudioFileRow[]>();
+
+  if (songIds.length === 0) {
+    return audioFilesBySongId;
+  }
+
+  const { data, error } = await supabase
+    .from("song_audio_files")
+    .select(songAudioFileSelectFields)
+    .in("song_id", songIds)
+    .order("slot_index");
+
+  if (error) {
+    throw error;
+  }
+
+  for (const row of data ?? []) {
+    const currentItems = audioFilesBySongId.get(row.song_id) ?? [];
+    currentItems.push(row);
+    audioFilesBySongId.set(row.song_id, currentItems);
+  }
+
+  return audioFilesBySongId;
+}
+
+async function mapSongsWithFallbackAudio(supabase: ReturnType<typeof getSupabaseBrowserClient>, rows: SongRow[]) {
+  const audioFilesBySongId = await loadSongAudioFilesBySongId(
+    supabase,
+    rows.map((row) => row.id),
+  );
+
+  return rows.map((row) =>
+    mapSong({
+      ...row,
+      song_audio_files: audioFilesBySongId.get(row.id) ?? [],
+    }),
+  );
+}
 
 function mapSongAudioFile(row: SongAudioFileRow): SongAudioFile {
   return {
@@ -142,12 +191,12 @@ export async function listSongs(search = "") {
   }
 
   const supabase = getSupabaseBrowserClient();
+  const safeSearch = sanitizeSearch(search);
   let query = supabase
     .from("songs")
     .select(songSelectFields)
     .order("title");
 
-  const safeSearch = sanitizeSearch(search);
   if (safeSearch) {
     query = query.or(`title.ilike.%${safeSearch}%,lyrics.ilike.%${safeSearch}%`);
   }
@@ -155,6 +204,25 @@ export async function listSongs(search = "") {
   const { data, error } = await query;
 
   if (error) {
+    if (isMissingSongAudioRelationError(error)) {
+      let fallbackQuery = supabase
+        .from("songs")
+        .select(baseSongSelectFields)
+        .order("title");
+
+      if (safeSearch) {
+        fallbackQuery = fallbackQuery.or(`title.ilike.%${safeSearch}%,lyrics.ilike.%${safeSearch}%`);
+      }
+
+      const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+
+      if (fallbackError) {
+        throw fallbackError;
+      }
+
+      return mapSongsWithFallbackAudio(supabase, (fallbackData ?? []) as SongRow[]);
+    }
+
     throw error;
   }
 
@@ -178,6 +246,26 @@ export async function getSong(songId: string) {
     if (error.code === "PGRST116") {
       return null;
     }
+
+    if (isMissingSongAudioRelationError(error)) {
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from("songs")
+        .select(baseSongSelectFields)
+        .eq("id", songId)
+        .single();
+
+      if (fallbackError) {
+        if (fallbackError.code === "PGRST116") {
+          return null;
+        }
+
+        throw fallbackError;
+      }
+
+      const songs = await mapSongsWithFallbackAudio(supabase, [fallbackData as SongRow]);
+      return songs[0] ?? null;
+    }
+
     throw error;
   }
 
