@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { appConfig } from "@/lib/config";
 
 type AppShellProps = {
@@ -17,9 +18,27 @@ type AppShellProps = {
 };
 
 const navigation = [{ href: "/songs", label: "Musicas" }];
+const themeStorageKey = "quarteto.theme";
+
+type ThemeMode = "light" | "dark";
 
 export function AppShell({ title, description, actions, highlights = [], children }: AppShellProps) {
   const pathname = usePathname();
+  const [theme, setTheme] = useState<ThemeMode>("light");
+
+  useEffect(() => {
+    const nextTheme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+    setTheme(nextTheme);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem(themeStorageKey, theme);
+  }, [theme]);
+
+  function toggleTheme() {
+    setTheme((currentTheme) => (currentTheme === "light" ? "dark" : "light"));
+  }
 
   return (
     <div className="page-shell">
@@ -39,6 +58,9 @@ export function AppShell({ title, description, actions, highlights = [], childre
                 ? "Supabase nao configurado"
                 : "Modo compartilhado Supabase"}
           </span>
+          <button className="button-ghost theme-toggle" onClick={toggleTheme} type="button">
+            {theme === "dark" ? "Modo claro" : "Modo escuro"}
+          </button>
           <Link className="button-ghost" href="/songs/new">
             Nova musica
           </Link>

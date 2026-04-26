@@ -13,9 +13,64 @@
   --success: #476050;
   --danger: #8a3b35;
   --shadow: 0 24px 60px rgba(77, 53, 39, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.7);
+  --code-bg: rgba(32, 26, 23, 0.06);
+  --control-bg: rgba(255, 255, 255, 0.8);
+  --pill-bg: rgba(255, 255, 255, 0.76);
+  --hero-start: rgba(255, 253, 249, 0.98);
+  --hero-end: rgba(245, 239, 231, 0.96);
+  --hero-spot-left: rgba(239, 213, 194, 0.75);
+  --hero-spot-right: rgba(247, 226, 212, 0.9);
+  --orb-left: rgba(170, 90, 53, 0.08);
+  --orb-right: rgba(71, 96, 80, 0.08);
+  --stat-bg: rgba(255, 255, 255, 0.7);
+  --stat-border: rgba(255, 255, 255, 0.78);
+  --slot-bg: rgba(255, 255, 255, 0.68);
+  --slot-border: rgba(32, 26, 23, 0.08);
+  --key-badge-bg: #fff4ec;
+  --tag-strong-bg: #f0e7db;
+  --tag-strong-text: #58493f;
+  --tag-subtle-bg: rgba(32, 26, 23, 0.05);
+  --active-border: rgba(170, 90, 53, 0.16);
   --radius-xl: 28px;
   --radius-lg: 22px;
   --radius-md: 16px;
+}
+
+html[data-theme="dark"] {
+  --bg: #171513;
+  --panel: rgba(31, 29, 27, 0.9);
+  --panel-strong: #24211e;
+  --text: #f2ebe3;
+  --muted: #b1a59a;
+  --line: rgba(242, 235, 227, 0.12);
+  --accent: #cc7a52;
+  --accent-strong: #f1a173;
+  --accent-soft: rgba(204, 122, 82, 0.18);
+  --soft: #22201d;
+  --soft-strong: #2b2723;
+  --success: #8eb197;
+  --danger: #dd8c84;
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --code-bg: rgba(255, 255, 255, 0.08);
+  --control-bg: rgba(255, 255, 255, 0.06);
+  --pill-bg: rgba(255, 255, 255, 0.06);
+  --hero-start: rgba(28, 25, 23, 0.98);
+  --hero-end: rgba(20, 18, 17, 0.96);
+  --hero-spot-left: rgba(130, 92, 69, 0.32);
+  --hero-spot-right: rgba(91, 67, 54, 0.26);
+  --orb-left: rgba(204, 122, 82, 0.12);
+  --orb-right: rgba(142, 177, 151, 0.09);
+  --stat-bg: rgba(255, 255, 255, 0.04);
+  --stat-border: rgba(255, 255, 255, 0.08);
+  --slot-bg: rgba(255, 255, 255, 0.04);
+  --slot-border: rgba(255, 255, 255, 0.08);
+  --key-badge-bg: rgba(204, 122, 82, 0.16);
+  --tag-strong-bg: rgba(255, 255, 255, 0.08);
+  --tag-strong-text: #e7ddd4;
+  --tag-subtle-bg: rgba(255, 255, 255, 0.06);
+  --active-border: rgba(204, 122, 82, 0.26);
 }
 
 * {
@@ -25,16 +80,17 @@
 html {
   min-height: 100%;
   background:
-    radial-gradient(circle at top left, rgba(239, 213, 194, 0.75), transparent 32%),
-    linear-gradient(180deg, #f8f5ef 0%, #f2ece3 100%);
+    radial-gradient(circle at top left, var(--hero-spot-left), transparent 32%),
+    linear-gradient(180deg, var(--hero-start) 0%, var(--hero-end) 100%);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   color: var(--text);
-  background: transparent;
+  background: var(--bg);
   font-family: Aptos, "Segoe UI", sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 a {
@@ -56,7 +112,7 @@ button {
 code {
   padding: 2px 6px;
   border-radius: 8px;
-  background: rgba(32, 26, 23, 0.06);
+  background: var(--code-bg);
 }
 
 .page-shell {
@@ -72,7 +128,7 @@ code {
 .lyrics-card,
 .empty-state {
   background: var(--panel);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--glass-border);
   box-shadow: var(--shadow);
   backdrop-filter: blur(14px);
 }
@@ -152,7 +208,7 @@ code {
 }
 
 .button-ghost {
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--control-bg);
   color: var(--text);
   border: 1px solid var(--line);
 }
@@ -188,7 +244,7 @@ code {
 .kicker,
 .nav-tab,
 .category-pill {
-  background: rgba(255, 255, 255, 0.76);
+  background: var(--pill-bg);
   color: var(--muted);
   border: 1px solid transparent;
 }
@@ -208,8 +264,8 @@ code {
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(circle at top right, rgba(247, 226, 212, 0.9), transparent 34%),
-    linear-gradient(180deg, rgba(255, 253, 249, 0.98), rgba(245, 239, 231, 0.96));
+    radial-gradient(circle at top right, var(--hero-spot-right), transparent 34%),
+    linear-gradient(180deg, var(--hero-start), var(--hero-end));
 }
 
 .hero-orb {
@@ -224,7 +280,7 @@ code {
   height: 180px;
   top: -70px;
   left: -60px;
-  background: rgba(170, 90, 53, 0.08);
+  background: var(--orb-left);
 }
 
 .hero-orb-right {
@@ -232,7 +288,7 @@ code {
   height: 160px;
   right: -45px;
   bottom: -70px;
-  background: rgba(71, 96, 80, 0.08);
+  background: var(--orb-right);
 }
 
 .hero-panel > * {
@@ -264,7 +320,7 @@ code {
 .nav-tab.is-active {
   background: var(--accent-soft);
   color: var(--accent-strong);
-  border-color: rgba(170, 90, 53, 0.16);
+  border-color: var(--active-border);
 }
 
 .hero-stats {
@@ -277,8 +333,8 @@ code {
 .hero-stat-card {
   padding: 16px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.78);
+  background: var(--stat-bg);
+  border: 1px solid var(--stat-border);
 }
 
 .hero-stat-card span {
@@ -342,8 +398,8 @@ code {
   gap: 10px;
   padding: 14px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.68);
-  border: 1px solid rgba(32, 26, 23, 0.08);
+  background: var(--slot-bg);
+  border: 1px solid var(--slot-border);
 }
 
 .field-wide {
@@ -391,7 +447,7 @@ code {
 .category-pill.is-active {
   background: var(--accent-soft);
   color: var(--accent-strong);
-  border-color: rgba(170, 90, 53, 0.16);
+  border-color: var(--active-border);
 }
 
 .song-list {
@@ -430,7 +486,7 @@ code {
 
 .key-badge {
   min-width: 48px;
-  background: #fff4ec;
+  background: var(--key-badge-bg);
   color: var(--accent-strong);
   font-weight: 700;
 }
@@ -446,13 +502,17 @@ code {
 }
 
 .tag.strong {
-  background: #f0e7db;
-  color: #58493f;
+  background: var(--tag-strong-bg);
+  color: var(--tag-strong-text);
 }
 
 .tag.subtle {
-  background: rgba(32, 26, 23, 0.05);
+  background: var(--tag-subtle-bg);
   color: var(--muted);
+}
+
+.theme-toggle {
+  min-width: 124px;
 }
 
 .meta-row.compact {
