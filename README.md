@@ -43,6 +43,22 @@ Adicione estas variables em `Settings > Secrets and variables > Actions`:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
+## Se a URL da Vercel abrir outro projeto
+
+Se o deploy do `quarteto-mvp` estiver abrindo a aplicacao de outro projeto, como a Barbearia, o problema nao esta nas telas deste app. Normalmente e uma destas configuracoes externas:
+
+- o secret `VERCEL_PROJECT_ID` do GitHub Actions aponta para o projeto errado na Vercel
+- o dominio foi conectado ao projeto errado em `Vercel > Project > Settings > Domains`
+
+Este repositorio agora valida no workflow se o `VERCEL_PROJECT_ID` realmente pertence ao projeto `quarteto-mvp` antes de publicar.
+
+Para corrigir de vez:
+
+1. Abra o projeto correto na Vercel e copie o `Project ID` dele.
+2. Atualize o secret `VERCEL_PROJECT_ID` no GitHub para esse valor.
+3. Em `Vercel > quarteto-mvp > Settings > Domains`, confirme que o dominio e o `*.vercel.app` usados por voce estao ligados a este projeto, e nao ao da Barbearia.
+4. Rode o workflow de deploy novamente.
+
 ## Como isso funciona depois
 
 ### Frontend

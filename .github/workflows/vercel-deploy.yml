@@ -20,6 +20,7 @@ jobs:
       contents: read
       pull-requests: write
     env:
+      EXPECTED_VERCEL_PROJECT_NAME: quarteto-mvp
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -56,6 +57,43 @@ jobs:
       - name: Install Vercel CLI
         if: steps.config.outputs.missing == '0'
         run: npm install --global vercel@latest
+
+      - name: Verify Vercel target project
+        if: steps.config.outputs.missing == '0'
+        run: |
+          node <<'EOF'
+          const expectedName = process.env.EXPECTED_VERCEL_PROJECT_NAME;
+          const projectId = process.env.VERCEL_PROJECT_ID;
+          const token = process.env.VERCEL_TOKEN;
+
+          async function main() {
+            const response = await fetch(`https://api.vercel.com/v9/projects/${projectId}`, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+
+            if (!response.ok) {
+              const body = await response.text();
+              throw new Error(`Could not load Vercel project ${projectId}: ${response.status} ${body}`);
+            }
+
+            const project = await response.json();
+
+            if (project.name !== expectedName) {
+              throw new Error(
+                `VERCEL_PROJECT_ID points to "${project.name}", but this repository expects "${expectedName}". Update the GitHub secret VERCEL_PROJECT_ID before deploying again.`,
+              );
+            }
+
+            console.log(`Verified Vercel project: ${project.name}`);
+          }
+
+          main().catch((error) => {
+            console.error(error.message);
+            process.exit(1);
+          });
+          EOF
 
       - name: Pull Vercel project settings
         if: steps.config.outputs.missing == '0'
